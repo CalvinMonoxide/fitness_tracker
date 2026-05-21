@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>My Workouts</h1>
+
+{% if workouts %}
+<table>
+    <thead>
+        <tr>
+            <th>Exercise</th>
+            <th>Duration (min)</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for workout in workouts %}
+        <tr>
+            <td>{{ workout.exercise }}</td>
+            <td>{{ workout.duration }}</td>
+            <td>{{ workout.date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No workouts logged yet. <a href="{{ url_for('add_workout') }}">Log your first one!</a></p>
+{% endif %}
+
+{% endblock %}
