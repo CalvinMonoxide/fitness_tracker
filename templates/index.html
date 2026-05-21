@@ -7,23 +7,22 @@
 <table>
     <thead>
         <tr>
-            <th>Exercise</th>
-            <th>Duration (min)</th>
             <th>Date</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for workout in workouts %}
         <tr>
-            <td>{{ workout.exercise }}</td>
-            <td>{{ workout.duration }}</td>
             <td>{{ workout.date }}</td>
+            <td><a href="{{ url_for('view_workout', workout_id=workout.id) }}">View</a></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 {% else %}
-<p>No workouts logged yet. <a href="{{ url_for('add_workout') }}">Log your first one!</a></p>
+<p>No workouts logged yet.</p>
 {% endif %}
 
+<p><a href="{{ url_for('add_workout') }}">+ New Workout</a></p>
 {% endblock %}

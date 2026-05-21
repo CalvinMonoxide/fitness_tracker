@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Workout: {{ workout.date }}</h1>
+
+{% if exercise_data %}
+    {% for exercise in exercise_data %}
+        <h2>{{ exercise.name }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Set</th>
+                    <th>Weight (lbs)</th>
+                    <th>Reps</th>
+                    <th>Duration (sec)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for set in exercise.sets %}
+                <tr>
+                    <td>{{ set.set_number }}</td>
+                    <td>{{ set.weight or '-' }}</td>
+                    <td>{{ set.reps or '-' }}</td>
+                    <td>{{ set.duration or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+{% else %}
+    <p>No exercises added yet.</p>
+{% endif %}
+
+<p>
+    <a href="{{ url_for('add_exercise', workout_id=workout.id) }}">+ Add Exercise</a>
+    |
+    <a href="{{ url_for('index') }}">← All Workouts</a>
+</p>
+{% endblock %}
