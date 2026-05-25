@@ -32,7 +32,7 @@
 {% endif %}
 
 <p>
-    <a href="{{ url_for('add_exercise', workout_id=workout.id) }}">+ Add Exercise</a>
+    <a href="{{ url_for('build_workout', workout_id=workout.id) }}">+ Add Exercise</a>
     |
     <a href="{{ url_for('index') }}">← All Workouts</a>
 </p>

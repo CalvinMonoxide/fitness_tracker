@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import sqlite3
 from datetime import datetime
 
@@ -66,96 +66,62 @@ def index():
 def add_workout():
     if request.method == 'POST':
         date = request.form.get('date')
-
         if date:
             conn = get_db()
-            cursor = conn.execute('INSERT INTO workouts (date) VALUES (?)',
-                (date,)
-            )
+            cursor = conn.execute('INSERT INTO workouts (date) VALUES (?)', (date,))
             workout_id = cursor.lastrowid
             conn.commit()
             conn.close()
-            return redirect(url_for('add_exercise', workout_id=workout_id))
-
+            return redirect(url_for('build_workout', workout_id=workout_id))
     return render_template('add_workout.html')
 
+@app.route('/workout/<int:workout_id>/build')
+def build_workout(workout_id):
+    conn = get_db()
+    workout = conn.execute('SELECT * FROM workouts WHERE id = ?', (workout_id,)).fetchone()
+    conn.close()
+    return render_template('build_workout.html', workout=workout)
 
-@app.route('/workout/<int:workout_id>/add', methods=['GET', 'POST'])
-def add_exercise(workout_id):
-    if request.method == 'POST':
-        exercise_name = request.form.get('exercise')
-        num_sets = request.form.get('sets')
+@app.route('/workout/<int:workout_id>/save', methods=['POST'])
+def save_workout(workout_id):
+    data = request.get_json()
+    conn = get_db()
 
-        if exercise_name and num_sets:
-            conn = get_db()
+    for exercise_data in data.get('exercises', []):
+        exercise_name = exercise_data['name']
 
+        # Get or create exercise
+        conn.execute(
+            'INSERT OR IGNORE INTO exercises (name) VALUES (?)',
+            (exercise_name,)
+        )
+        row = conn.execute(
+            'SELECT id FROM exercises WHERE name = ?',
+            (exercise_name,)
+        ).fetchone()
+        exercise_id = row['id']
+
+        # Delete existing sets for this exercise in this workout
+        # (in case they're re-saving)
+        conn.execute(
+            'DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?',
+            (workout_id, exercise_id)
+        )
+
+        # Insert the new sets
+        for i, set_data in enumerate(exercise_data.get('sets', [])):
             conn.execute(
-                'INSERT OR IGNORE INTO exercises (name) VALUES (?)',
-                (exercise_name,)
+                'INSERT INTO sets (workout_id, exercise_id, set_number, weight, reps, duration) VALUES (?, ?, ?, ?, ?, ?)',
+                (workout_id, exercise_id, i + 1, 
+                    set_data.get('weight'), 
+                    set_data.get('reps'), 
+                    set_data.get('duration'))
             )
 
-            row = conn.execute(
-                'SELECT id FROM exercises WHERE name = ?',
-                (exercise_name,)
-            ).fetchone()
-            exercise_id = row['id']
-
-            num_sets = int(num_sets)
-            for set_num in range(1, num_sets + 1):
-                conn.execute(
-                    'INSERT INTO sets (workout_id, exercise_id, set_number) VALUES (?, ?, ?)',
-                    (workout_id, exercise_id, set_num)
-                )
-
-            conn.commit()
-            conn.close()
-            return redirect(url_for('fill_sets', workout_id=workout_id, exercise_id=exercise_id))
-
-    return render_template('add_exercise.html', workout_id=workout_id)
-
-
-@app.route('/workout/<int:workout_id>/sets/<int:exercise_id>', methods=['GET', 'POST'])
-def fill_sets(workout_id, exercise_id):
-    conn = get_db()
-    sets = conn.execute(
-        'SELECT * FROM sets WHERE workout_id = ? AND exercise_id = ? ORDER BY set_number',
-        (workout_id, exercise_id)
-    ).fetchall()
-
-    exercise_row = conn.execute(
-        'SELECT name FROM exercises WHERE id = ?',
-        (exercise_id,)
-    ).fetchone()
-    exercise_name = exercise_row['name']
+    conn.commit()
     conn.close()
+    return jsonify({'success': True})
 
-    if request.method == 'POST':
-        conn = get_db()
-        for set_num in range(1, len(sets) + 1):
-            set_id = request.form.get(f'set_id_{set_num}')
-            weight = request.form.get(f'weight_{set_num}')
-            reps = request.form.get(f'reps_{set_num}')
-            duration = request.form.get(f'duration_{set_num}')
-
-            if set_id:
-                weight = int(weight) if weight else None
-                reps = int(reps) if reps else None
-                duration = int(duration) if duration else None
-                conn.execute(
-                    'UPDATE sets SET weight=?, reps=?, duration=? WHERE id=?',
-                    (weight, reps, duration, set_id)
-                )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('add_exercise', workout_id=workout_id))
-
-    return render_template(
-        'fill_sets.html',
-        sets=sets,
-        workout_id=workout_id,
-        exercise_id=exercise_id,
-        exercise_name=exercise_name
-    )
 
 @app.route('/workout/<int:workout_id>')
 def view_workout(workout_id):

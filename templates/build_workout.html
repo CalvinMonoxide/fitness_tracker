@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Workout: {{ workout.date }}</h1>
+
+<div id="exercises-container">
+    <p>No exercises added yet. Click "+ Add Exercise" to begin.</p>
+</div>
+
+<div style="margin-bottom: 10px;">
+    <input type="text" id="new-exercise-name" placeholder="Exercise name">
+    <button id="add-exercise-btn">+ Add Exercise</button>
+</div>
+
+<br>
+<button id="save-workout-btn">Save Workout</button>
+
+<p><a href="{{ url_for('index') }}">← Back to all workouts</a></p>
+
+<script>
+let workoutData = {
+    exercises: []
+};
+
+function createSetRow(exercise, exerciseIndex, set, setIndex) {
+    let row = document.createElement('tr');
+
+    let setNumCell = document.createElement('td');
+    setNumCell.textContent = setIndex + 1;
+    row.appendChild(setNumCell);
+
+    let weightCell = document.createElement('td');
+    let weightInput = document.createElement('input');
+    weightInput.type = 'number';
+    weightInput.value = set.weight || '';
+    weightInput.placeholder = 'Weight';
+    weightInput.addEventListener('input', function() {
+        workoutData.exercises[exerciseIndex].sets[setIndex].weight = 
+            weightInput.value ? parseInt(weightInput.value) : null;
+    });
+    weightCell.appendChild(weightInput);
+    row.appendChild(weightCell);
+
+    let repsCell = document.createElement('td');
+    let repsInput = document.createElement('input');
+    repsInput.type = 'number';
+    repsInput.value = set.reps || '';
+    repsInput.placeholder = 'Reps';
+    repsInput.addEventListener('input', function() {
+        workoutData.exercises[exerciseIndex].sets[setIndex].reps = 
+            repsInput.value ? parseInt(repsInput.value) : null;
+    });
+    repsCell.appendChild(repsInput);
+    row.appendChild(repsCell);
+
+    let durationCell = document.createElement('td');
+    let durationInput = document.createElement('input');
+    durationInput.type = 'number';
+    durationInput.value = set.duration || '';
+    durationInput.placeholder = 'Duration';
+    durationInput.addEventListener('input', function() {
+        workoutData.exercises[exerciseIndex].sets[setIndex].duration = 
+            durationInput.value ? parseInt(durationInput.value) : null;
+    });
+    durationCell.appendChild(durationInput);
+    row.appendChild(durationCell);
+
+    let deleteCell = document.createElement('td');
+    let deleteSetBtn = document.createElement('button');
+    deleteSetBtn.textContent = '✕';
+    deleteSetBtn.addEventListener('click', function() {
+        workoutData.exercises[exerciseIndex].sets.splice(setIndex, 1);
+        renderExercises();
+    });
+    deleteCell.appendChild(deleteSetBtn);
+    row.appendChild(deleteCell);
+
+    return row;
+}
+
+function renderExercises() {
+    let container = document.getElementById('exercises-container');
+    container.innerHTML = '';
+
+    if (workoutData.exercises.length === 0) {
+        container.innerHTML = '<p>No exercises added yet. Click "+ Add Exercise" to begin.</p>';
+        return;
+    }
+
+    for (let i = 0; i < workoutData.exercises.length; i++) {
+        let exercise = workoutData.exercises[i];
+
+        let exerciseDiv = document.createElement('div');
+        exerciseDiv.style.border = '1px solid #ccc';
+        exerciseDiv.style.padding = '10px';
+        exerciseDiv.style.marginBottom = '15px';
+
+        let header = document.createElement('h3');
+        header.textContent = exercise.name;
+        exerciseDiv.appendChild(header);
+
+        let deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete Exercise';
+        deleteBtn.style.marginBottom = '10px';
+        deleteBtn.addEventListener('click', function() {
+            workoutData.exercises.splice(i, 1);
+            renderExercises();
+        });
+        exerciseDiv.appendChild(deleteBtn);
+
+        let table = document.createElement('table');
+        let thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Set</th>
+                <th>Weight (lbs)</th>
+                <th>Reps</th>
+                <th>Duration (sec)</th>
+                <th></th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        let tbody = document.createElement('tbody');
+        for (let j = 0; j < exercise.sets.length; j++) {
+            let row = createSetRow(exercise, i, exercise.sets[j], j);
+            tbody.appendChild(row);
+        }
+        table.appendChild(tbody);
+        exerciseDiv.appendChild(table);
+
+        let addSetBtn = document.createElement('button');
+        addSetBtn.textContent = '+ Add Set';
+        addSetBtn.style.marginTop = '5px';
+        addSetBtn.addEventListener('click', function() {
+            exercise.sets.push({ weight: null, reps: null, duration: null });
+            renderExercises();
+        });
+        exerciseDiv.appendChild(addSetBtn);
+
+        container.appendChild(exerciseDiv);
+    }
+}
+
+document.getElementById('add-exercise-btn').addEventListener('click', function() {
+    let input = document.getElementById('new-exercise-name');
+    let name = input.value.trim();
+    if (name) {
+        workoutData.exercises.push({
+            name: name,
+            sets: []
+        });
+        input.value = '';  // Clear the input
+        renderExercises();
+    }
+});
+
+document.getElementById('new-exercise-name').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('add-exercise-btn').click();
+    }
+});
+
+document.getElementById('save-workout-btn').addEventListener('click', function() {
+    fetch('/workout/{{ workout.id }}/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(workoutData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/workout/{{ workout.id }}';
+        } else {
+            alert('Error saving workout');
+        }
+    });
+});
+
+// Initial render
+renderExercises();
+</script>
+{% endblock %}
