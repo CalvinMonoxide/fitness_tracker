@@ -5,7 +5,11 @@
 
 {% if exercise_data %}
     {% for exercise in exercise_data %}
-        <h2>{{ exercise.name }}</h2>
+        <h2>{{ exercise.name }}
+            <form method="POST" action="{{ url_for('delete_exercise', workout_id=workout.id, exercise_id=exercise.id) }}" style="display: inline;" onsubmit="return confirm('Delete {{ exercise.name }} and all its sets?');">
+                <button type="submit" style="color: red; background: none; border: none; cursor: pointer;">✕</button>
+            </form>
+        </h2>
         <table>
             <thead>
                 <tr>

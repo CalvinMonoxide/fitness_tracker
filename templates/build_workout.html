@@ -13,9 +13,9 @@
 </div>
 
 <br>
-<button id="save-workout-btn">Save Workout</button>
+<button id="save-workout-btn">Save & Exit</button>
 
-<p><a href="{{ url_for('index') }}">← Back to all workouts</a></p>
+<p><a href="{{ url_for('index') }}">← Exit without saving</a></p>
 
 <script>
 let workoutData = {
@@ -179,7 +179,14 @@ document.getElementById('save-workout-btn').addEventListener('click', function()
     });
 });
 
-// Initial render
-renderExercises();
+// Load existing data on page load
+fetch('/workout/{{ workout.id }}/data')
+    .then(response => response.json())
+    .then(data => {
+        if (data.exercises.length > 0) {
+            workoutData.exercises = data.exercises;
+            renderExercises();
+        }
+    });
 </script>
 {% endblock %}

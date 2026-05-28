@@ -153,6 +153,7 @@ def view_workout(workout_id):
         ''', (workout_id, exercise['id'])).fetchall()
 
         exercise_data.append({
+            'id': exercise['id'],
             'name': exercise['name'],
             'sets': sets
         })
@@ -164,6 +165,53 @@ def view_workout(workout_id):
         workout=workout,
         exercise_data=exercise_data
     )
+
+@app.route('/workout/<int:workout_id>/data')
+def get_workout_data(workout_id):
+    conn = get_db()
+
+    exercises = conn.execute('''
+        SELECT DISTINCT e.id, e.name
+        FROM sets s
+        JOIN exercises e ON s.exercise_id = e.id
+        WHERE s.workout_id = ?
+    ''', (workout_id,)).fetchall()
+
+    exercise_list = []
+    for exercise in exercises:
+        sets = conn.execute('''
+            SELECT weight, reps, duration
+            FROM sets
+            WHERE workout_id = ? AND exercise_id = ?
+            ORDER BY set_number
+        ''', (workout_id, exercise['id'])).fetchall()
+
+        set_list = []
+        for s in sets:
+            set_list.append({
+                'weight': s['weight'],
+                'reps': s['reps'],
+                'duration': s['duration']
+            })
+
+        exercise_list.append({
+            'name': exercise['name'],
+            'sets': set_list
+        })
+
+    conn.close()
+    return jsonify({'exercises': exercise_list})
+
+@app.route('/workout/<int:workout_id>/exercise/<int:exercise_id>/delete', methods=['POST'])
+def delete_exercise(workout_id, exercise_id):
+    conn = get_db()
+    conn.execute(
+        'DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?',
+        (workout_id, exercise_id)
+    )
+    conn.commit()
+    conn.close()
+    return redirect(url_for('build_workout', workout_id=workout_id))
 
 if __name__ == '__main__':
     init_db()  # Create the table on startup
