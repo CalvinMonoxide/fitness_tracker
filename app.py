@@ -86,6 +86,9 @@ def build_workout(workout_id):
 def save_workout(workout_id):
     data = request.get_json()
     conn = get_db()
+    
+    # Delete ALL sets for this workout
+    conn.execute('DELETE FROM sets WHERE workout_id = ?', (workout_id,))
 
     for exercise_data in data.get('exercises', []):
         exercise_name = exercise_data['name']
